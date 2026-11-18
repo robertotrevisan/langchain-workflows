@@ -54,7 +54,11 @@ def criar_app(
                 max_acoes=config.max_acoes,
                 acoes_com_aprovacao=config.acoes_com_aprovacao,
             )
-            app.state.registro = Registro(config.max_ciclos, config.janela_supressao)
+            app.state.registro = Registro(
+                config.max_ciclos,
+                config.janela_supressao,
+                config.carencia_reentrada,
+            )
             app.state.token = config.webhook_token
             app.state.token_aprovacao = config.aprovacao_token
             logger.info(

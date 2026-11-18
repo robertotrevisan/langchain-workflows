@@ -34,6 +34,13 @@ def pausado() -> Ciclo:
     return Ciclo("aguardando_aprovacao", None, [pendente], [])
 
 
+def passar_carencia(registro: Registro, id: str) -> None:
+    """Recua o desfecho para alem da carencia de reentrada."""
+    for e in registro.obter(id).timeline:
+        if e.tipo == "desfecho":
+            e.momento -= registro.carencia_reentrada + timedelta(seconds=1)
+
+
 def abrir(registro: Registro, ciclo: Ciclo | None = None) -> str:
     id = registro.receber(evento()).id
     if ciclo is not None:
@@ -72,6 +79,7 @@ def test_firing_apos_escalado_ou_encerrado_e_duplicado(status):
 def test_firing_apos_resolvido_pelo_agente_e_reentrada():
     registro = Registro()
     id = abrir(registro, concluido("resolvido"))
+    passar_carencia(registro, id)
     item = registro.receber(evento())
     assert (item.acao, item.id) == ("reentrada", id)
     r = registro.obter(id)
@@ -82,12 +90,42 @@ def test_firing_apos_resolvido_pelo_agente_e_reentrada():
 def test_reentradas_alem_do_limite_escalam():
     registro = Registro(max_ciclos=2)
     id = abrir(registro, concluido("resolvido"))
+    passar_carencia(registro, id)
     registro.receber(evento())  # ciclo 2
     registro.registrar_ciclo(id, concluido("resolvido"))
+    passar_carencia(registro, id)
     item = registro.receber(evento())
     assert item.acao == "escalado"
     assert registro.obter(id).processamento == "escalado"
     assert registro.obter(id).timeline[-1].tipo == "limite"
+
+
+def test_firing_na_carencia_e_duplicado_sem_mudar_estado():
+    registro = Registro(carencia_reentrada=timedelta(minutes=5))
+    id = abrir(registro, concluido("resolvido"))
+    eventos = len(registro.obter(id).timeline)
+
+    item = registro.receber(evento())
+
+    assert (item.acao, item.id) == ("duplicado", id)
+    r = registro.obter(id)
+    assert (r.processamento, r.ciclos) == ("aguardando_confirmacao", 1)
+    assert len(r.timeline) == eventos
+
+
+def test_carencia_conta_a_partir_do_ultimo_desfecho():
+    registro = Registro(carencia_reentrada=timedelta(minutes=5))
+    id = abrir(registro, concluido("resolvido"))
+    passar_carencia(registro, id)
+    registro.receber(evento())  # reentrada, ciclo 2
+    registro.registrar_ciclo(id, concluido("resolvido"))
+    assert registro.receber(evento()).acao == "duplicado"
+
+
+def test_carencia_zero_reentra_imediatamente():
+    registro = Registro(carencia_reentrada=timedelta(0))
+    abrir(registro, concluido("resolvido"))
+    assert registro.receber(evento()).acao == "reentrada"
 
 
 def test_resolved_fecha_e_proximo_firing_abre_outro():

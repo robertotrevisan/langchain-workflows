@@ -35,12 +35,20 @@ class Config:
     max_ciclos: int
     acoes_com_aprovacao: tuple[str, ...]
     janela_supressao: timedelta
+    carencia_reentrada: timedelta
 
 
 def _inteiro_positivo(variavel: str, padrao: str) -> int:
     valor = int(os.getenv(variavel, padrao))
     if valor < 1:
         raise ConfiguracaoInvalida(f"{variavel} deve ser maior que zero: {valor}")
+    return valor
+
+
+def _inteiro_nao_negativo(variavel: str, padrao: str) -> int:
+    valor = int(os.getenv(variavel, padrao))
+    if valor < 0:
+        raise ConfiguracaoInvalida(f"{variavel} nao pode ser negativo: {valor}")
     return valor
 
 
@@ -93,5 +101,8 @@ def carregar_config() -> Config:
         acoes_com_aprovacao=acoes,
         janela_supressao=timedelta(
             minutes=_inteiro_positivo("JANELA_SUPRESSAO_MIN", "10")
+        ),
+        carencia_reentrada=timedelta(
+            minutes=_inteiro_nao_negativo("CARENCIA_REENTRADA_MIN", "5")
         ),
     )
