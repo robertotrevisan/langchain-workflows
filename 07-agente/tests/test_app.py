@@ -1,17 +1,20 @@
 import json
+from datetime import timedelta
 
 import pytest
 from conftest import agir, concluir, consultar, criar_agente, ler_entrada
 from fastapi.testclient import TestClient
 
 from app import criar_app
+from registro import Registro
 
 # O TestClient executa as background tasks antes de devolver a resposta, entao
 # cada POST ja deixa o agente parado (concluido ou aguardando aprovacao).
 
 
-def cliente_para(ambiente, roteiro, token=None, **opcoes) -> TestClient:
-    return TestClient(criar_app(criar_agente(ambiente, roteiro, **opcoes), token))
+def cliente_para(ambiente, roteiro, token=None, registro=None, **opcoes) -> TestClient:
+    agente = criar_agente(ambiente, roteiro, **opcoes)
+    return TestClient(criar_app(agente, token, registro=registro))
 
 
 def postar(cliente, entrada: str, rota: str = "alertmanager") -> list[dict]:
@@ -82,7 +85,8 @@ def test_reentrada_pelo_webhook_retoma_o_mesmo_incidente(ambiente):
         consultar(),
         concluir("resolvido", "deploy revertido"),
     ]
-    with cliente_para(ambiente, roteiro) as cliente:
+    registro = Registro(carencia_reentrada=timedelta(0))
+    with cliente_para(ambiente, roteiro, registro=registro) as cliente:
         [primeiro] = postar(cliente, "alertmanager-checkout.json")
         [segundo] = postar(cliente, "alertmanager-checkout.json")
 
@@ -93,6 +97,20 @@ def test_reentrada_pelo_webhook_retoma_o_mesmo_incidente(ambiente):
         assert tipos(registro).count("desfecho") == 2
         assert "reentrada" in tipos(registro)
         assert ambiente.consultar_estado("checkout-api")["versao"] == "v2.13.4"
+
+
+def test_reenvio_logo_apos_resolvido_nao_acorda_o_agente(ambiente):
+    roteiro = [agir("reverter_deploy"), consultar(), concluir("resolvido")]
+    with cliente_para(ambiente, roteiro) as cliente:  # carencia padrao
+        [primeiro] = postar(cliente, "alertmanager-checkout.json")
+        [reenvio] = postar(cliente, "alertmanager-checkout.json")
+
+        assert reenvio == {**primeiro, "acao": "duplicado"}
+        registro = cliente.get(f"/incidentes/{primeiro['id']}").json()
+        assert (registro["processamento"], registro["ciclos"]) == (
+            "aguardando_confirmacao",
+            1,
+        )
 
 
 def test_alerta_causado_pela_acao_e_suprimido(ambiente):

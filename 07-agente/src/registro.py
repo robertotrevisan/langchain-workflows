@@ -7,9 +7,14 @@ Maquina de estados de `processamento`:
     processando --> aguardando_confirmacao   (agente concluiu resolvido)
                 --> escalado | encerrado     (escalado | sem_acao)
                 --> falha                    (erro; libera o fingerprint)
-    aguardando_confirmacao --(novo firing)--> processando (reentrada)
+    aguardando_confirmacao --(firing na carencia)--> duplicado, sem mudar
+                           --(novo firing)--> processando (reentrada)
                            --(firing apos max_ciclos)--> escalado
     qualquer aberto --(resolved da origem)--> resolvido
+
+A carencia de reentrada absorve o que nao e recaida: depois de uma correcao, o
+alerta leva alguns minutos para limpar na origem, e a origem pode reenviar o
+mesmo alerta enquanto isso (Alertmanager: group_interval, repeat_interval).
 
 O fingerprint fica aberto ate a origem mandar resolved ou o processamento
 falhar. Vive no processo: reiniciar perde o historico, e varias replicas nao
@@ -42,9 +47,11 @@ class Registro:
         self,
         max_ciclos: int = 3,
         janela_supressao: timedelta = timedelta(minutes=10),
+        carencia_reentrada: timedelta = timedelta(minutes=5),
     ):
         self.max_ciclos = max_ciclos
         self.janela_supressao = janela_supressao
+        self.carencia_reentrada = carencia_reentrada
         self._por_id: dict[str, RegistroIncidente] = {}
         # origem:fingerprint -> id do incidente aberto
         self._abertos: dict[str, str] = {}
@@ -81,6 +88,17 @@ class Registro:
                 return registro
         return None
 
+    def _em_carencia(self, registro: RegistroIncidente) -> bool:
+        """O agente concluiu resolvido ha menos que a carencia."""
+        concluido_em = max(
+            (e.momento for e in registro.timeline if e.tipo == "desfecho"),
+            default=None,
+        )
+        return (
+            concluido_em is not None
+            and _agora() - concluido_em < self.carencia_reentrada
+        )
+
     def receber(self, incidente: Incidente) -> ItemRecebido:
         """Decide o que fazer com o evento. As acoes "processando" e
         "reentrada" exigem disparar o agente."""
@@ -103,6 +121,9 @@ class Registro:
         if aberto is not None:
             if aberto.processamento != "aguardando_confirmacao":
                 # Reenvio da origem enquanto o agente trabalha ou aguarda humano.
+                return item(aberto.incidente.id, "duplicado")
+            if self._em_carencia(aberto):
+                # Cedo demais para ser recaida: o alerta ainda nao limpou.
                 return item(aberto.incidente.id, "duplicado")
             if aberto.ciclos >= self.max_ciclos:
                 aberto.processamento = "escalado"

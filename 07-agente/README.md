@@ -91,13 +91,15 @@ uv run pytest
 
 **Reentrada externa.** O thread do checkpointer e o `id` do incidente. Quando o agente conclui `resolvido`, o incidente fica em `aguardando_confirmacao` com o fingerprint aberto. Se a origem disparar de novo em vez de mandar `resolved`, a conclusao nao se sustentou: o mesmo thread recebe uma mensagem de reentrada e continua com todo o historico. Depois de `MAX_CICLOS`, o novo disparo escala sem chamar o modelo.
 
+**Carencia.** Depois de uma correcao, o alerta leva alguns minutos para limpar na origem, e o Alertmanager pode reenviar o mesmo alerta nesse intervalo (`group_interval`, `repeat_interval`). Por isso, um disparo ate `CARENCIA_REENTRADA_MIN` (padrao 5) depois do `resolvido` do agente e `duplicado`, sem acordar o agente. Num teste com o modelo real, um reenvio imediato virou reentrada: o agente viu o servico saudavel, notou o mesmo `startsAt` e escalou, gastando um ciclo inteiro de chamadas. A carencia conta a partir do ultimo desfecho, e nao compara `startsAt`: uma recaida sem o alerta ter limpado mantem o mesmo `startsAt` e precisa reentrar.
+
 O cenario do checkout-api tem uma armadilha para isso: `reiniciar_servico` deixa o servico saudavel na primeira consulta de metricas e degradado nas seguintes. Um agente que reinicia e verifica uma vez conclui `resolvido`, e o alerta volta.
 
 | `processamento` | Quando | Novo firing do mesmo alerta |
 | --- | --- | --- |
 | `processando` | o agente esta executando | `duplicado` |
 | `aguardando_aprovacao` | uma acao espera decisao humana | `duplicado` |
-| `aguardando_confirmacao` | o agente concluiu `resolvido` | `reentrada` (ou `escalado` apos `MAX_CICLOS`) |
+| `aguardando_confirmacao` | o agente concluiu `resolvido` | `duplicado` na carencia; depois, `reentrada` (ou `escalado` apos `MAX_CICLOS`) |
 | `escalado` | o agente escalou ou esgotou o teto | `duplicado`: o incidente e de um humano |
 | `encerrado` | o agente concluiu `sem_acao` | `duplicado` |
 | `resolvido` | a origem mandou `resolved` | abre incidente novo |
@@ -115,6 +117,7 @@ O cenario do checkout-api tem uma armadilha para isso: `reiniciar_servico` deixa
 | Aprovacao humana | `HumanInTheLoopMiddleware` | `ACOES_COM_APROVACAO` pausa antes de executar; aprovar ou rejeitar |
 | `MAX_CHAMADAS_MODELO` | `ModelCallLimitMiddleware` | por thread, soma os ciclos; ao esgotar, `escalado` |
 | `MAX_CICLOS` | `Registro` | reentradas alem do limite escalam |
+| `CARENCIA_REENTRADA_MIN` | `Registro` | disparo logo apos o `resolvido` do agente e `duplicado`; `0` desliga |
 | Resolucao com prova | `validar_desfecho` | `resolvido` sem acao executada ou sem consulta de metricas depois dela vira `escalado` |
 | Supressao | `Registro` | alerta novo no mesmo servico ate `JANELA_SUPRESSAO_MIN` apos uma acao entra na timeline do incidente que agiu |
 
