@@ -7,7 +7,6 @@ Os destinos esperados sao o comportamento desejado, nao uma garantia: uma
 falha aqui pede revisao do prompt do roteador ou do cenario.
 """
 
-import asyncio
 import os
 
 import pytest
@@ -53,10 +52,7 @@ CASOS = [
 @pytest.fixture(scope="module")
 def roteador():
     from config import carregar_config
-    from triagem import (
-        SYSTEM_ROTEADOR,  # noqa: F401  (garante o mesmo modulo)
-        Triagem,
-    )
+    from triagem import Triagem
     from workflow import criar_modelo
 
     config = carregar_config()
@@ -70,13 +66,13 @@ def roteador():
 def test_destino_esperado(roteador, nome, criar, disparos, esperado):
     from workflow import descrever_incidente
 
-    decisao = asyncio.run(
-        roteador.ainvoke(
-            {
-                "incidente": descrever_incidente(criar()),
-                "disparos_anteriores": disparos,
-            }
-        )
+    # Sincrono: o cliente HTTP do modelo e compartilhado entre os casos, e um
+    # asyncio.run por caso o prenderia a um event loop ja fechado.
+    decisao = roteador.invoke(
+        {
+            "incidente": descrever_incidente(criar()),
+            "disparos_anteriores": disparos,
+        }
     )
     print(f"\n{nome}: {decisao.model_dump()}")
     assert decisao.destino == esperado
