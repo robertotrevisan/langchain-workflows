@@ -43,6 +43,8 @@ uv sync
 uv run fastapi dev src/app.py
 ```
 
+Para usar OpenRouter ou outro gateway compativel com a OpenAI, veja `OPENAI_BASE_URL` no `.env.example`.
+
 Os endpoints, a autenticacao e os payloads sao os mesmos do 05. Exemplos por rota esperada:
 
 ```bash

@@ -44,7 +44,7 @@ uv sync
 uv run fastapi dev src/app.py
 ```
 
-Sem a chave, o app nao sobe e informa qual variavel falta.
+Sem a chave, o app nao sobe e informa qual variavel falta. Para usar OpenRouter ou outro gateway compativel com a OpenAI, veja `OPENAI_BASE_URL` no `.env.example`.
 
 Com `WEBHOOK_TOKEN` definido, todos os endpoints exigem o token:
 
