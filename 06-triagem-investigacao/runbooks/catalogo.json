@@ -1,0 +1,60 @@
+[
+  {
+    "id": "rb-reverter-deploy",
+    "titulo": "Reverter deploy recente",
+    "quando_usar": "O desvio comecou minutos depois de um deploy e nao ha outra mudanca no periodo.",
+    "passos": [
+      "Confirmar o horario do deploy e o inicio do desvio nas metricas",
+      "Comparar a taxa de erro da versao atual com a anterior",
+      "Reverter para a versao anterior pelo pipeline",
+      "Acompanhar erros e latencia por 15 minutos apos a reversao"
+    ],
+    "risco": "medio"
+  },
+  {
+    "id": "rb-pool-conexoes",
+    "titulo": "Saturacao do pool de conexoes com o banco",
+    "quando_usar": "Uso do pool proximo de 100%, timeouts ao obter conexao e CPU do servico normal.",
+    "passos": [
+      "Verificar conexoes ativas e em espera no banco",
+      "Identificar consultas lentas ou transacoes longas abertas pela versao atual",
+      "Avaliar aumento temporario do tamanho do pool, respeitando o limite do banco",
+      "Se a saturacao comecou apos um deploy, considerar rb-reverter-deploy"
+    ],
+    "risco": "medio"
+  },
+  {
+    "id": "rb-dependencia-externa",
+    "titulo": "Dependencia externa degradada",
+    "quando_usar": "Latencia ou erro concentrados nas chamadas a um servico de terceiro, sem mudanca interna.",
+    "passos": [
+      "Consultar a pagina de status do fornecedor",
+      "Confirmar que o aumento de latencia esta nas chamadas ao fornecedor",
+      "Ativar circuit breaker ou reduzir timeout das chamadas, se disponivel",
+      "Abrir chamado com o fornecedor com horarios e exemplos"
+    ],
+    "risco": "baixo"
+  },
+  {
+    "id": "rb-escalar-consumidores",
+    "titulo": "Escalar consumidores de fila",
+    "quando_usar": "Fila acumulando com consumidores saudaveis e dependencias respondendo normalmente.",
+    "passos": [
+      "Confirmar que as dependencias dos consumidores estao saudaveis",
+      "Aumentar o numero de consumidores dentro do limite da dependencia mais lenta",
+      "Acompanhar a taxa de consumo ate a fila voltar ao normal"
+    ],
+    "risco": "baixo"
+  },
+  {
+    "id": "rb-escalar-replicas",
+    "titulo": "Escalar replicas por saturacao de recurso",
+    "quando_usar": "CPU ou memoria das instancias proximas do limite, com latencia subindo junto.",
+    "passos": [
+      "Confirmar saturacao de CPU ou memoria por instancia",
+      "Aumentar replicas ou o limite de recursos",
+      "Verificar se a saturacao veio de aumento de trafego ou de regressao"
+    ],
+    "risco": "baixo"
+  }
+]

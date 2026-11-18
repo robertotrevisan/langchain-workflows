@@ -142,17 +142,17 @@ O que os exemplos 01 a 04 omitem de proposito. Os exemplos continuam didaticos; 
 | Configuracao de modelo | IDs de modelo fixos no codigo | 05 |
 | Validacao de ambiente | 01/02 fazem `raise SystemExit` no import se faltar chave, o que derruba o servidor; 03/04 nao validam | 05 |
 | Retry e timeout | nenhum `max_retries`, `timeout` ou `.with_retry()` | 05 |
-| Fallback de modelo | nenhum `.with_fallbacks()` | 05 |
+| Fallback de modelo | nenhum `.with_fallbacks()` para outro modelo ou provider | pendente; o 05 usa `.with_fallbacks()` so para resultado parcial |
 | Tratamento de erros HTTP | qualquer falha do LLM vira 500 | 05 |
 | Resultado parcial | um ramo com falha derruba a requisicao (04) | 05 |
 | Limites de entrada | sem `max_length`, sem controle de custo nem de prompt injection | 05 |
 | Concorrencia | endpoints sincronos (`def`) com `.invoke()` | 05 |
-| Observabilidade | `print()`, sem logging estruturado nem tracing | 05 |
+| Observabilidade | `print()`, sem logging estruturado nem tracing | 05 (logging com `incidente=<id>`; tracing via variaveis `LANGSMITH_*`) |
 | Testes | nenhum; use fake chat models do `langchain_core` para testar o fluxo sem chamar a API | 05 |
 | Confianca do roteador | `Roteamento` sem justificativa nem confianca (03) | 06 |
 | Recomendacao de acao | nenhuma | 06 |
 | Acao e verificacao | nenhuma | 07 |
-| Autenticacao | nenhuma | fora do escopo; ver roadmap |
+| Autenticacao | nenhuma | 05 (`WEBHOOK_TOKEN` opcional); 07 (`APROVACAO_TOKEN` separado para aprovar acoes); assinatura do SNS fora do escopo |
 | Avaliacao de qualidade | nenhuma; o contrato valida a forma, nao o conteudo | fora do escopo; ver roadmap |
 
 ## Roadmap: modelos 05 a 07
@@ -218,6 +218,8 @@ Construida no 05 e copiada para 06 e 07.
 
 ### 05 — Investigacao
 
+**Status: implementado** em `05-investigacao/`. O README do projeto descreve endpoints, cenarios e status.
+
 ```text
 webhook -> Incidente -> RunnableParallel(metricas, logs, deploys) -> consolidacao -> Diagnostico
                          cada ramo: consulta a fonte ficticia -> LLM analisa o resultado
@@ -227,7 +229,8 @@ webhook -> Incidente -> RunnableParallel(metricas, logs, deploys) -> consolidaca
 
 - a base comum completa: webhook, adaptadores, `Incidente`, deduplicacao e processamento em background;
 - ramos que consultam dados antes de chamar o LLM, cada um com uma fonte e uma perspectiva;
-- resultado parcial: um ramo que falha vira `Analise` com status de falha, e a consolidacao continua com os demais (`return_exceptions` / `.with_fallbacks()` por ramo);
+- resultado parcial: um ramo que falha vira `Analise(status="falha")` via `.with_fallbacks(..., exception_key="erro")`, e a consolidacao continua com os demais;
+- `origem_falha` separa "a fonte nao tinha dados" (`inconclusivo`) de "o modelo ou o codigo falhou" (registro em `falha`, com nova tentativa no proximo disparo);
 - `perspectiva` definida pelo codigo, nao pelo modelo;
 - modelo e timeouts configuraveis por variavel de ambiente, com `max_retries` e `timeout`;
 - validacao de ambiente na inicializacao do app, sem `SystemExit` no import;
@@ -238,26 +241,29 @@ webhook -> Incidente -> RunnableParallel(metricas, logs, deploys) -> consolidaca
 
 ### 06 — Triagem + investigacao
 
+**Status: implementado** em `06-triagem-investigacao/`. O README do projeto descreve rotas, limiar e avaliacao do roteador.
+
 ```text
 webhook -> Incidente -> roteador (destino, confianca, justificativa)
-                          +--> incidente   -> investigacao do 05 -> recomendacao de runbook
+                          +--> investigar  -> investigacao do 05 -> recomendacao de runbook
                           +--> ruido       -> registra e encerra
-                          +--> fallback    -> escala para humano
+                          +--> humano      -> registra para escalacao
 ```
 
 **Entrega:**
 
-- `Roteamento` com `destino`, `confianca` e `justificativa`; confianca abaixo de um limite configuravel vai para `fallback`;
-- rota `ruido` para alertas informativos ou flapping, o que evita gastar a investigacao;
-- um catalogo de runbooks ficticio, e a recomendacao escolhe um runbook do catalogo, nunca inventa;
-- um contrato de saida unico para todas as rotas;
-- testes do roteador por cenario: cada cenario tem a rota esperada.
-
-As rotas finais do roteador ficam para a implementacao. As de cima sao o ponto de partida.
+- `Roteamento` com `destino`, `confianca` e `justificativa`; confianca abaixo de `LIMIAR_CONFIANCA` vai para `humano`, preservando o destino original na `Tratativa`;
+- rota `ruido` para alertas informativos, heartbeat ou flapping, o que evita gastar a investigacao; o roteador recebe quantos incidentes com o mesmo `origem:fingerprint` foram abertos na ultima hora;
+- um catalogo de runbooks ficticio; a recomendacao escolhe um id do catalogo, e o codigo descarta ids inventados;
+- um contrato de saida unico para todas as rotas (`Tratativa`);
+- `MODELO_ROTEADOR` separado de `MODELO`, para usar um modelo mais barato na triagem;
+- testes da logica de rotas com modelo falso, e uma avaliacao do roteador com o modelo real (`RODAR_LLM=1`) sobre tres entradas com destino esperado.
 
 **Nao faz:** execucao de acao.
 
 ### 07 — Agente
+
+**Status: implementado** em `07-agente/`. O README do projeto descreve ciclos, limites, aprovacao e timeline.
 
 ```text
 webhook -> Incidente -> agente (tool-calling em loop)
@@ -281,10 +287,17 @@ webhook -> Incidente -> agente (tool-calling em loop)
 - **Timeline auditavel** de cada passo: consulta, hipotese, acao, resultado e verificacao.
 - **Implementacao:** `create_agent` do LangChain 1.x com checkpointer por incidente e middleware de aprovacao humana; migrar para LangGraph explicito se o fluxo exigir. *(premissa do ADR 001)*
 
+**Como ficou:**
+
+- `create_agent` com `HumanInTheLoopMiddleware` (`per_call`), `ModelCallLimitMiddleware` por thread e um middleware proprio, `PoliticaDeAcoes`, que roda antes da aprovacao: acao so no servico do incidente, argumentos validos e `MAX_ACOES` por incidente. A premissa do ADR se confirmou: nao foi preciso LangGraph explicito.
+- Desfecho por `ToolStrategy`, conferido pelo codigo: `resolvido` sem acao executada ou sem consulta de metricas depois dela vira `escalado`.
+- A reentrada acontece quando o agente concluiu `resolvido` e a origem dispara de novo; incidentes escalados continuam com o humano e tratam novos disparos como duplicados.
+- A triagem do 06 nao entra: incidente sem servico escala sem chamar o modelo, e o agente pode concluir `sem_acao`.
+- Validado com o modelo real (via OpenRouter): reverteu o deploy apos aprovacao e verificou; com a reversao rejeitada, reiniciou como mitigacao, verificou e escalou porque a causa continuava; no pagamentos-worker, escalou sem agir.
+
 ### Fora do escopo dos tres modelos
 
 - fontes de dados reais (Prometheus, CloudWatch Logs, CI);
-- autenticacao dos webhooks: pelo menos um token compartilhado sera necessario antes de expor em rede;
 - validacao da assinatura das mensagens SNS;
 - avaliacao automatizada da qualidade dos diagnosticos;
 - fila externa (SQS, Redis): o background roda no proprio processo.

@@ -1,0 +1,32 @@
+{
+  "version": "4",
+  "groupKey": "{}:{alertname=~\".*\"}",
+  "truncatedAlerts": 0,
+  "status": "firing",
+  "receiver": "aiops-webhook",
+  "groupLabels": {},
+  "commonLabels": {
+    "env": "producao"
+  },
+  "commonAnnotations": {},
+  "externalURL": "http://alertmanager.exemplo.local:9093",
+  "alerts": [
+    {
+      "status": "firing",
+      "labels": {
+        "alertname": "CheckoutPodRestarting",
+        "service": "checkout-api",
+        "severity": "warning",
+        "env": "producao"
+      },
+      "annotations": {
+        "summary": "Pods do checkout-api reiniciando",
+        "description": "Os pods do checkout-api reiniciaram nos ultimos 5 minutos."
+      },
+      "startsAt": "2026-11-16T14:31:00Z",
+      "endsAt": "0001-01-01T00:00:00Z",
+      "generatorURL": "http://prometheus.exemplo.local:9090/graph",
+      "fingerprint": "9988776655443322"
+    }
+  ]
+}

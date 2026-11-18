@@ -1,0 +1,6 @@
+{
+  "titulo": "Erro intermitente no servico de busca",
+  "descricao": "Usuarios relatam buscas sem resultado desde 13h.",
+  "servico": "busca-api",
+  "severidade": "warning"
+}

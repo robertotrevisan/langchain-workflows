@@ -1,0 +1,29 @@
+{
+  "version": "4",
+  "groupKey": "{}:{alertname=~\".*\"}",
+  "truncatedAlerts": 0,
+  "status": "firing",
+  "receiver": "aiops-webhook",
+  "groupLabels": {},
+  "commonLabels": {},
+  "commonAnnotations": {},
+  "externalURL": "http://alertmanager.exemplo.local:9093",
+  "alerts": [
+    {
+      "status": "firing",
+      "labels": {
+        "alertname": "Watchdog",
+        "severity": "none",
+        "prometheus": "monitoring/k8s"
+      },
+      "annotations": {
+        "summary": "Alerta que sempre dispara para garantir que o pipeline de alertas funciona",
+        "description": "Este alerta dispara continuamente. Se ele parar de chegar, o Alertmanager ou o Prometheus estao com problema."
+      },
+      "startsAt": "2026-11-16T00:00:00Z",
+      "endsAt": "0001-01-01T00:00:00Z",
+      "generatorURL": "http://prometheus.exemplo.local:9090/graph",
+      "fingerprint": "0011223344556677"
+    }
+  ]
+}

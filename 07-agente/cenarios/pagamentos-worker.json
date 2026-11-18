@@ -1,0 +1,175 @@
+{
+  "descricao": "Gateway de pagamento externo lento. Nenhuma acao local resolve: o caminho certo e escalar para um humano.",
+  "estado_inicial": {
+    "versao": "v1.8.2",
+    "versao_anterior": "v1.8.1",
+    "replicas": 6
+  },
+  "fontes_indisponiveis": [
+    "logs"
+  ],
+  "degradado": {
+    "metricas": [
+      {
+        "nome": "fila_mensagens_pendentes",
+        "unidade": "mensagens",
+        "pontos": [
+          {
+            "horario": "13:50",
+            "valor": 120
+          },
+          {
+            "horario": "14:00",
+            "valor": 900
+          },
+          {
+            "horario": "14:10",
+            "valor": 4800
+          },
+          {
+            "horario": "14:20",
+            "valor": 11200
+          }
+        ]
+      },
+      {
+        "nome": "latencia_gateway_pagamento_p95",
+        "unidade": "ms",
+        "pontos": [
+          {
+            "horario": "13:50",
+            "valor": 380
+          },
+          {
+            "horario": "14:00",
+            "valor": 2900
+          },
+          {
+            "horario": "14:10",
+            "valor": 8100
+          },
+          {
+            "horario": "14:20",
+            "valor": 9700
+          }
+        ]
+      },
+      {
+        "nome": "workers_ativos",
+        "unidade": "instancias",
+        "pontos": [
+          {
+            "horario": "13:50",
+            "valor": 6
+          },
+          {
+            "horario": "14:00",
+            "valor": 6
+          },
+          {
+            "horario": "14:10",
+            "valor": 6
+          },
+          {
+            "horario": "14:20",
+            "valor": 6
+          }
+        ]
+      }
+    ],
+    "logs": []
+  },
+  "saudavel": {
+    "metricas": [
+      {
+        "nome": "fila_mensagens_pendentes",
+        "unidade": "mensagens",
+        "pontos": [
+          {
+            "horario": "13:50",
+            "valor": 120
+          },
+          {
+            "horario": "14:00",
+            "valor": 900
+          },
+          {
+            "horario": "14:10",
+            "valor": 4800
+          },
+          {
+            "horario": "14:20",
+            "valor": 11200
+          }
+        ]
+      },
+      {
+        "nome": "latencia_gateway_pagamento_p95",
+        "unidade": "ms",
+        "pontos": [
+          {
+            "horario": "13:50",
+            "valor": 380
+          },
+          {
+            "horario": "14:00",
+            "valor": 2900
+          },
+          {
+            "horario": "14:10",
+            "valor": 8100
+          },
+          {
+            "horario": "14:20",
+            "valor": 9700
+          }
+        ]
+      },
+      {
+        "nome": "workers_ativos",
+        "unidade": "instancias",
+        "pontos": [
+          {
+            "horario": "13:50",
+            "valor": 6
+          },
+          {
+            "horario": "14:00",
+            "valor": 6
+          },
+          {
+            "horario": "14:10",
+            "valor": 6
+          },
+          {
+            "horario": "14:20",
+            "valor": 6
+          }
+        ]
+      }
+    ],
+    "logs": []
+  },
+  "deploys": [
+    {
+      "versao": "v1.8.2",
+      "horario": "3 dias atras",
+      "autor": "pipeline",
+      "status": "sucesso"
+    }
+  ],
+  "efeitos": {
+    "reiniciar_servico": {
+      "efeito": "nenhum",
+      "nota": "o gargalo e o gateway externo"
+    },
+    "escalar_replicas": {
+      "efeito": "nenhum",
+      "nota": "mais consumidores esperam pelo mesmo gateway lento"
+    },
+    "reverter_deploy": {
+      "efeito": "nenhum",
+      "nota": "nao houve deploy recente"
+    }
+  }
+}

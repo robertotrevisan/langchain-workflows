@@ -1,0 +1,57 @@
+{
+  "descricao": "Deploy v2.14.0 seguido de esgotamento do pool de conexoes com o banco",
+  "metricas": [
+    {
+      "nome": "taxa_erro_5xx",
+      "unidade": "percentual",
+      "pontos": [
+        {"horario": "13:50", "valor": 0.4},
+        {"horario": "14:00", "valor": 0.5},
+        {"horario": "14:10", "valor": 6.2},
+        {"horario": "14:20", "valor": 18.1}
+      ]
+    },
+    {
+      "nome": "latencia_p95",
+      "unidade": "ms",
+      "pontos": [
+        {"horario": "13:50", "valor": 210},
+        {"horario": "14:00", "valor": 230},
+        {"horario": "14:10", "valor": 1400},
+        {"horario": "14:20", "valor": 1900}
+      ]
+    },
+    {
+      "nome": "pool_conexoes_uso",
+      "unidade": "fracao",
+      "pontos": [
+        {"horario": "13:50", "valor": 0.55},
+        {"horario": "14:00", "valor": 0.6},
+        {"horario": "14:10", "valor": 0.97},
+        {"horario": "14:20", "valor": 0.99}
+      ]
+    },
+    {
+      "nome": "cpu_uso",
+      "unidade": "fracao",
+      "pontos": [
+        {"horario": "13:50", "valor": 0.41},
+        {"horario": "14:00", "valor": 0.43},
+        {"horario": "14:10", "valor": 0.47},
+        {"horario": "14:20", "valor": 0.46}
+      ]
+    }
+  ],
+  "logs": [
+    {"horario": "14:02:11", "nivel": "INFO", "mensagem": "Started CheckoutApplication v2.14.0"},
+    {"horario": "14:06:40", "nivel": "WARN", "mensagem": "HikariPool-1 - Thread starvation or clock leap detected"},
+    {"horario": "14:08:03", "nivel": "ERROR", "mensagem": "HikariPool-1 - Connection is not available, request timed out after 30000ms"},
+    {"horario": "14:08:03", "nivel": "ERROR", "mensagem": "POST /checkout 503 - CannotGetJdbcConnectionException"},
+    {"horario": "14:12:19", "nivel": "ERROR", "mensagem": "HikariPool-1 - Connection is not available, request timed out after 30000ms"},
+    {"horario": "14:15:52", "nivel": "WARN", "mensagem": "PromotionService.applyCoupons executed 48 queries in a single transaction"}
+  ],
+  "deploys": [
+    {"versao": "v2.13.4", "horario": "ontem 16:30", "autor": "pipeline", "status": "sucesso"},
+    {"versao": "v2.14.0", "horario": "14:02", "autor": "pipeline", "status": "sucesso"}
+  ]
+}

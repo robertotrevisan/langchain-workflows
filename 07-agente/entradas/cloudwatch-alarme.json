@@ -1,0 +1,12 @@
+{
+  "Type": "Notification",
+  "MessageId": "8f3c1e2a-0000-0000-0000-000000000001",
+  "TopicArn": "arn:aws:sns:us-east-1:000000000000:aiops-alarmes",
+  "Timestamp": "2026-11-16T14:20:32.000Z",
+  "SignatureVersion": "1",
+  "Signature": "ficticia",
+  "SigningCertURL": "https://sns.us-east-1.amazonaws.com/ficticio.pem",
+  "Subject": "ALARM: \"checkout-api-critical-5xx\"",
+  "Message": "{\"AlarmName\": \"checkout-api-critical-5xx\", \"AlarmDescription\": \"Erros 5xx no ALB do checkout-api\", \"AWSAccountId\": \"000000000000\", \"NewStateValue\": \"ALARM\", \"NewStateReason\": \"Threshold Crossed: 1 datapoint [18.1 (16/11/26 14:20:00)] was greater than the threshold (5.0).\", \"StateChangeTime\": \"2026-11-16T14:20:31.512+0000\", \"Region\": \"US East (N. Virginia)\", \"AlarmArn\": \"arn:aws:cloudwatch:us-east-1:000000000000:alarm:checkout-api-critical-5xx\", \"OldStateValue\": \"OK\", \"Trigger\": {\"MetricName\": \"HTTPCode_Target_5XX_Count\", \"Namespace\": \"AWS/ApplicationELB\", \"Statistic\": \"SUM\", \"Dimensions\": [{\"value\": \"checkout-api\", \"name\": \"ServiceName\"}], \"Period\": 60, \"EvaluationPeriods\": 1, \"ComparisonOperator\": \"GreaterThanThreshold\", \"Threshold\": 5.0}}",
+  "UnsubscribeURL": "https://sns.us-east-1.amazonaws.com/?Action=Unsubscribe&ficticio"
+}
