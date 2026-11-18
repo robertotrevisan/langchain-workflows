@@ -1,3 +1,4 @@
+import base64
 import json
 
 import pytest
@@ -122,7 +123,8 @@ def test_falha_no_workflow_marca_falha_e_libera_novo_disparo(fontes):
 
         registro = cliente.get(f"/incidentes/{item['id']}").json()
         assert registro["processamento"] == "falha"
-        assert "modelo indisponivel" in registro["erro"]
+        # A mensagem da excecao fica no log, nao na API.
+        assert registro["erro"] == "RuntimeError"
 
         [novo] = cliente.post("/webhooks/generico", json=payload).json()["recebidos"]
         assert novo["acao"] == "processando"
@@ -130,3 +132,67 @@ def test_falha_no_workflow_marca_falha_e_libera_novo_disparo(fontes):
 
 def test_incidente_inexistente_e_404(cliente):
     assert cliente.get("/incidentes/nao-existe").status_code == 404
+
+
+def test_generico_nao_fecha_incidente_de_outra_origem(cliente):
+    [alerta, _] = cliente.post(
+        "/webhooks/alertmanager", json=ler_entrada("alertmanager.json")
+    ).json()["recebidos"]
+
+    falso = {
+        "fingerprint": alerta["fingerprint"],
+        "status": "resolved",
+        "titulo": "tentativa de fechar alerta alheio",
+    }
+    [item] = cliente.post("/webhooks/generico", json=falso).json()["recebidos"]
+
+    assert item["acao"] == "ignorado"
+    registro = cliente.get(f"/incidentes/{alerta['id']}").json()
+    assert registro["processamento"] == "concluido"
+
+
+def test_erro_do_modelo_nao_vaza_na_api(fontes):
+    app = criar_app(Investigacao(ModeloFalso(falhar_analises=True), fontes))
+    with TestClient(app) as cliente:
+        payload = ler_entrada("generico.json") | {"servico": "pagamentos-worker"}
+        [item] = cliente.post("/webhooks/generico", json=payload).json()["recebidos"]
+
+        corpo = cliente.get(f"/incidentes/{item['id']}").text
+        assert "401" not in corpo
+        assert "chave invalida" not in corpo
+
+
+@pytest.fixture
+def cliente_com_token(fontes):
+    app = criar_app(Investigacao(ModeloFalso(), fontes), token="segredo")
+    with TestClient(app) as cliente:
+        yield cliente
+
+
+def test_token_configurado_exige_autenticacao(cliente_com_token):
+    payload = ler_entrada("generico.json")
+    sem = cliente_com_token.post("/webhooks/generico", json=payload)
+    errado = cliente_com_token.post(
+        "/webhooks/generico", json=payload, headers={"Authorization": "Bearer x"}
+    )
+
+    assert sem.status_code == 401
+    assert errado.status_code == 401
+    assert cliente_com_token.get("/incidentes/qualquer").status_code == 401
+
+
+def test_token_aceito_como_bearer_e_como_senha_do_basic(cliente_com_token):
+    bearer = cliente_com_token.post(
+        "/webhooks/generico",
+        json=ler_entrada("generico.json"),
+        headers={"Authorization": "Bearer segredo"},
+    )
+    basic = base64.b64encode(b"sns:segredo").decode()
+    sns = cliente_com_token.post(
+        "/webhooks/cloudwatch",
+        content=json.dumps(ler_entrada("cloudwatch-alarme.json")),
+        headers={"Authorization": f"Basic {basic}", "Content-Type": "text/plain"},
+    )
+
+    assert bearer.status_code == 202
+    assert sns.status_code == 202

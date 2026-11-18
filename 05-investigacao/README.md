@@ -46,6 +46,13 @@ uv run fastapi dev src/app.py
 
 Sem a chave, o app nao sobe e informa qual variavel falta.
 
+Com `WEBHOOK_TOKEN` definido, todos os endpoints exigem o token:
+
+- Alertmanager e generico: `Authorization: Bearer <token>`. No Alertmanager, use `http_config.authorization.credentials`.
+- SNS: credenciais na URL da inscricao (`https://sns:<token>@host/webhooks/cloudwatch`), que chegam como Basic auth.
+
+Sem o token, a API fica aberta e o app registra um aviso na inicializacao.
+
 Envie um alerta e consulte o resultado com o `id` devolvido:
 
 ```bash
@@ -118,13 +125,15 @@ Se todos os ramos falharem e algum falhar por erro de modelo ou de codigo (`orig
 - um ramo que falha vira `Analise(status="falha")` via `.with_fallbacks(..., exception_key="erro")` e nao derruba os demais;
 - o modelo e configuravel por `MODELO` (`init_chat_model`), com `timeout` e `max_retries`;
 - os modulos nao tem efeito colateral no import: a configuracao e lida no `lifespan`, o que permite aos testes injetar um modelo falso via `criar_app(investigacao)`;
-- o nome do servico e validado antes de virar caminho de arquivo, porque vem de um payload externo.
+- o nome do servico e validado antes de virar caminho de arquivo, porque vem de um payload externo;
+- a deduplicacao usa `origem:fingerprint`, entao uma origem nao fecha nem bloqueia incidente de outra;
+- a API expoe so o tipo do erro (`RuntimeError`, `OpenAIAuthenticationError`); a mensagem completa fica no log.
 
 ## Limites intencionais
 
 - registro em memoria: reiniciar perde o historico e varias replicas nao compartilham estado;
 - background no proprio processo, sem fila externa;
-- sem autenticacao nos webhooks e sem validar a assinatura do SNS: nao exponha em rede assim;
+- autenticacao por token compartilhado e opcional, e a assinatura das mensagens do SNS nao e validada;
 - a confirmacao de inscricao do SNS e registrada no log, nao executada;
 - sem fallback para outro modelo ou provider quando o modelo configurado falha;
 - sem triagem (modelo 06) e sem execucao de acoes (modelo 07).

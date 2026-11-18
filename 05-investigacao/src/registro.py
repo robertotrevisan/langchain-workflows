@@ -16,16 +16,22 @@ def _agora() -> datetime:
 class Registro:
     def __init__(self):
         self._por_id: dict[str, RegistroIncidente] = {}
-        # fingerprint -> id do incidente ainda aberto (nao resolvido, sem falha)
+        # origem:fingerprint -> id do incidente ainda aberto (nao resolvido, sem falha)
         self._abertos: dict[str, str] = {}
 
     def obter(self, id: str) -> RegistroIncidente | None:
         return self._por_id.get(id)
 
+    @staticmethod
+    def _chave(incidente: Incidente) -> str:
+        # Por origem: uma origem nunca fecha nem bloqueia incidente de outra.
+        return f"{incidente.origem}:{incidente.fingerprint}"
+
     def receber(self, incidente: Incidente) -> ItemRecebido:
         """Decide o que fazer com o evento. Somente a acao "processando" exige
         disparar a investigacao."""
-        aberto = self._abertos.get(incidente.fingerprint)
+        chave = self._chave(incidente)
+        aberto = self._abertos.get(chave)
 
         if incidente.status == "resolved":
             if aberto is None:
@@ -35,7 +41,7 @@ class Registro:
             registro = self._por_id[aberto]
             registro.processamento = "resolvido"
             registro.atualizado_em = _agora()
-            del self._abertos[incidente.fingerprint]
+            del self._abertos[chave]
             return ItemRecebido(
                 id=aberto, fingerprint=incidente.fingerprint, acao="resolvido"
             )
@@ -53,7 +59,7 @@ class Registro:
             recebido_em=agora,
             atualizado_em=agora,
         )
-        self._abertos[incidente.fingerprint] = incidente.id
+        self._abertos[chave] = incidente.id
         return ItemRecebido(
             id=incidente.id, fingerprint=incidente.fingerprint, acao="processando"
         )
@@ -73,5 +79,6 @@ class Registro:
             registro.processamento = "falha"
         registro.atualizado_em = _agora()
         # Libera o fingerprint: um novo disparo tenta investigar de novo.
-        if self._abertos.get(registro.incidente.fingerprint) == id:
-            del self._abertos[registro.incidente.fingerprint]
+        chave = self._chave(registro.incidente)
+        if self._abertos.get(chave) == id:
+            del self._abertos[chave]

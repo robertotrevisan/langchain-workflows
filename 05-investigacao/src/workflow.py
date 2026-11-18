@@ -132,13 +132,23 @@ class Investigacao:
 
         def falhar(entrada: dict) -> Analise:
             erro = entrada["erro"]
+            if not isinstance(erro, FonteIndisponivel):
+                logger.error(
+                    "perspectiva=%s erro=%s: %s", perspectiva, type(erro).__name__, erro
+                )
             return Analise(
                 perspectiva=perspectiva,
                 status="falha",
                 origem_falha=(
                     "fonte" if isinstance(erro, FonteIndisponivel) else "processamento"
                 ),
-                erro=f"{type(erro).__name__}: {erro}",
+                # A mensagem da fonte e nossa; a de outras excecoes pode conter
+                # detalhes do provider e fica so no log.
+                erro=(
+                    f"FonteIndisponivel: {erro}"
+                    if isinstance(erro, FonteIndisponivel)
+                    else type(erro).__name__
+                ),
             )
 
         cadeia = RunnableLambda(coletar) | analisar | RunnableLambda(montar)

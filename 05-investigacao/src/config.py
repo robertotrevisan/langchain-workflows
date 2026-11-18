@@ -26,6 +26,7 @@ class Config:
     max_retries: int
     janela: str
     cenarios_dir: Path
+    webhook_token: str | None
 
 
 def carregar_config() -> Config:
@@ -52,4 +53,5 @@ def carregar_config() -> Config:
         max_retries=int(os.getenv("MODELO_MAX_RETRIES", "2")),
         janela=os.getenv("JANELA_INVESTIGACAO", "30m"),
         cenarios_dir=cenarios_dir,
+        webhook_token=os.getenv("WEBHOOK_TOKEN") or None,
     )

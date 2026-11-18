@@ -1,9 +1,10 @@
 import logging
 from contextlib import asynccontextmanager
 
-from fastapi import BackgroundTasks, FastAPI, HTTPException, Request
+from fastapi import BackgroundTasks, Depends, FastAPI, HTTPException, Request
 from pydantic import ValidationError
 
+from autenticacao import verificar_token
 from config import carregar_config
 from contratos import (
     EventoGenerico,
@@ -25,9 +26,11 @@ logging.basicConfig(
 logger = logging.getLogger("investigacao")
 
 
-def criar_app(investigacao: Investigacao | None = None) -> FastAPI:
-    """Sem argumento, monta a investigacao a partir do ambiente na inicializacao.
-    Os testes injetam uma investigacao com modelo falso."""
+def criar_app(
+    investigacao: Investigacao | None = None, token: str | None = None
+) -> FastAPI:
+    """Sem investigacao, monta tudo a partir do ambiente na inicializacao.
+    Os testes injetam uma investigacao com modelo falso e, opcionalmente, o token."""
 
     @asynccontextmanager
     async def lifespan(app: FastAPI):
@@ -37,8 +40,12 @@ def criar_app(investigacao: Investigacao | None = None) -> FastAPI:
                 criar_modelo(config), FonteCenarios(config.cenarios_dir), config.janela
             )
             logger.info("modelo=%s cenarios=%s", config.modelo, config.cenarios_dir)
+            app.state.token = config.webhook_token
         else:
             app.state.investigacao = investigacao
+            app.state.token = token
+        if app.state.token is None:
+            logger.warning("WEBHOOK_TOKEN ausente: endpoints sem autenticacao")
         app.state.registro = Registro()
         yield
 
@@ -50,6 +57,7 @@ def criar_app(investigacao: Investigacao | None = None) -> FastAPI:
         ),
         version="0.1.0",
         lifespan=lifespan,
+        dependencies=[Depends(verificar_token)],
     )
 
     async def investigar(incidente: Incidente) -> None:
@@ -59,7 +67,8 @@ def criar_app(investigacao: Investigacao | None = None) -> FastAPI:
             diagnostico = await app.state.investigacao.executar(incidente)
         except Exception as erro:  # o background nao tem para quem propagar
             logger.exception("incidente=%s investigacao falhou", incidente.id)
-            registro.falhar(incidente.id, f"{type(erro).__name__}: {erro}")
+            # Detalhes ficam no log; a API expoe so o tipo do erro.
+            registro.falhar(incidente.id, type(erro).__name__)
             return
         registro.concluir(incidente.id, diagnostico)
         logger.info("incidente=%s investigacao %s", incidente.id, diagnostico.status)

@@ -81,5 +81,5 @@ def test_modelo_falhando_em_todos_os_ramos_e_falha_e_nao_inconclusivo(fontes):
 
 def test_modelo_falhando_e_fonte_indisponivel_ainda_e_falha(fontes):
     # pagamentos-worker: logs falha por fonte, os demais por modelo.
-    with pytest.raises(RuntimeError, match="401"):
+    with pytest.raises(RuntimeError, match="nenhuma perspectiva concluiu"):
         executar(ModeloFalso(falhar_analises=True), fontes, "pagamentos-worker")

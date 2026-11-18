@@ -20,7 +20,7 @@ target-version = "py312"
 select = ["E", "F", "I", "B", "UP"]
 
 [tool.ruff.lint.isort]
-known-first-party = ["app", "config", "contratos", "fontes", "registro", "webhooks", "workflow"]
+known-first-party = ["app", "autenticacao", "config", "contratos", "fontes", "registro", "webhooks", "workflow"]
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
