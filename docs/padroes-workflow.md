@@ -152,7 +152,7 @@ O que os exemplos 01 a 04 omitem de proposito. Os exemplos continuam didaticos; 
 | Confianca do roteador | `Roteamento` sem justificativa nem confianca (03) | 06 |
 | Recomendacao de acao | nenhuma | 06 |
 | Acao e verificacao | nenhuma | 07 |
-| Autenticacao | nenhuma | 05 (`WEBHOOK_TOKEN` opcional); assinatura do SNS fora do escopo |
+| Autenticacao | nenhuma | 05 (`WEBHOOK_TOKEN` opcional); 07 (`APROVACAO_TOKEN` separado para aprovar acoes); assinatura do SNS fora do escopo |
 | Avaliacao de qualidade | nenhuma; o contrato valida a forma, nao o conteudo | fora do escopo; ver roadmap |
 
 ## Roadmap: modelos 05 a 07

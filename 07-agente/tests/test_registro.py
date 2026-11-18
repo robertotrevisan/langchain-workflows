@@ -123,27 +123,30 @@ def test_pausa_registra_pendentes_e_decisao_retoma():
     assert r.processamento == "aguardando_aprovacao"
     assert [p.ferramenta for p in r.pendentes] == ["reverter_deploy"]
 
-    pendentes = registro.iniciar_decisao(id, aprovar=True, motivo="ok do oncall")
+    pendentes = registro.iniciar_decisao(
+        id, aprovar=True, motivo="ok do oncall", aprovador="ana"
+    )
 
     assert [p.interrupcao_id for p in pendentes] == ["i1"]
     assert (r.processamento, r.pendentes) == ("processando", [])
     assert r.timeline[-1].tipo == "aprovacao"
     assert "ok do oncall" in r.timeline[-1].detalhe
+    assert r.timeline[-1].dados["aprovador"] == "ana"
 
 
 def test_decisao_fora_de_aprovacao_e_invalida():
     registro = Registro()
     id = abrir(registro)
     with pytest.raises(TransicaoInvalida):
-        registro.iniciar_decisao(id, aprovar=True, motivo=None)
+        registro.iniciar_decisao(id, aprovar=True, motivo=None, aprovador="ana")
 
 
 def test_segunda_decisao_e_invalida():
     registro = Registro()
     id = abrir(registro, pausado())
-    registro.iniciar_decisao(id, aprovar=True, motivo=None)
+    registro.iniciar_decisao(id, aprovar=True, motivo=None, aprovador="ana")
     with pytest.raises(TransicaoInvalida):
-        registro.iniciar_decisao(id, aprovar=False, motivo=None)
+        registro.iniciar_decisao(id, aprovar=False, motivo=None, aprovador="ana")
 
 
 def test_resolved_descarta_aprovacao_pendente():
@@ -152,12 +155,14 @@ def test_resolved_descarta_aprovacao_pendente():
     registro.receber(evento(status="resolved"))
     assert registro.obter(id).pendentes == []
     with pytest.raises(TransicaoInvalida):
-        registro.iniciar_decisao(id, aprovar=True, motivo=None)
+        registro.iniciar_decisao(id, aprovar=True, motivo=None, aprovador="ana")
 
 
 def test_decisao_em_incidente_inexistente():
     with pytest.raises(KeyError):
-        Registro().iniciar_decisao("nao-existe", aprovar=True, motivo=None)
+        Registro().iniciar_decisao(
+            "nao-existe", aprovar=True, motivo=None, aprovador="ana"
+        )
 
 
 # Supressao

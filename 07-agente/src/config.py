@@ -29,6 +29,7 @@ class Config:
     janela: str
     cenarios_dir: Path
     webhook_token: str | None
+    aprovacao_token: str | None
     max_chamadas_modelo: int
     max_acoes: int
     max_ciclos: int
@@ -71,13 +72,21 @@ def carregar_config() -> Config:
             f"Validas: {list(ACOES_CONHECIDAS)}"
         )
 
+    webhook_token = os.getenv("WEBHOOK_TOKEN") or None
+    aprovacao_token = os.getenv("APROVACAO_TOKEN") or None
+    if aprovacao_token is not None and aprovacao_token == webhook_token:
+        raise ConfiguracaoInvalida(
+            "APROVACAO_TOKEN deve ser diferente de WEBHOOK_TOKEN"
+        )
+
     return Config(
         modelo=modelo,
         timeout=float(os.getenv("MODELO_TIMEOUT", "60")),
         max_retries=int(os.getenv("MODELO_MAX_RETRIES", "2")),
         janela=os.getenv("JANELA_INVESTIGACAO", "30m"),
         cenarios_dir=cenarios_dir,
-        webhook_token=os.getenv("WEBHOOK_TOKEN") or None,
+        webhook_token=webhook_token,
+        aprovacao_token=aprovacao_token,
         max_chamadas_modelo=_inteiro_positivo("MAX_CHAMADAS_MODELO", "15"),
         max_acoes=_inteiro_positivo("MAX_ACOES", "3"),
         max_ciclos=_inteiro_positivo("MAX_CICLOS", "3"),

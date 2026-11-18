@@ -42,7 +42,7 @@ A triagem do 06 nao entra: o agente pode concluir `sem_acao` ou `escalado` sozin
 ## Executar
 
 ```bash
-cp .env.example .env   # preencha a chave e, fora do ambiente local, WEBHOOK_TOKEN
+cp .env.example .env   # preencha a chave e, fora do ambiente local, WEBHOOK_TOKEN e APROVACAO_TOKEN
 uv sync
 uv run fastapi dev src/app.py
 ```
@@ -59,7 +59,8 @@ curl -X POST -H "$H" --data @entradas/alertmanager-checkout.json $API/webhooks/a
 curl $API/incidentes/<id>        # processamento: aguardando_aprovacao, pendentes: [reverter_deploy]
 
 # 2. Aprovar (ou {"decisao": "rejeitar", "motivo": "..."}). O agente reverte e verifica.
-curl -X POST -H "$H" -d '{"decisao": "aprovar", "motivo": "ok do oncall"}' $API/incidentes/<id>/aprovacao
+curl -X POST -H "$H" -d '{"decisao": "aprovar", "aprovador": "ana", "motivo": "ok do oncall"}' \
+  $API/incidentes/<id>/aprovacao
 curl $API/incidentes/<id>        # aguardando_confirmacao, desfecho: resolvido
 
 # 3. A origem confirma.
@@ -108,6 +109,7 @@ O cenario do checkout-api tem uma armadilha para isso: `reiniciar_servico` deixa
 | --- | --- | --- |
 | Lista fechada de ferramentas | `criar_ferramentas` | 4 consultas e 3 acoes; nada alem disso existe para o modelo |
 | Acao so no servico do incidente | `PoliticaDeAcoes` | bloqueia e devolve erro ao modelo |
+| Uma acao por resposta do modelo | `PoliticaDeAcoes` | as chamadas de uma resposta rodam em paralelo; so a primeira acao executa, as demais sao bloqueadas antes da aprovacao |
 | Argumentos validos | `PoliticaDeAcoes` | `replicas` entre 1 e 20, `motivo` de 10 a 500 caracteres |
 | `MAX_ACOES` por incidente | `PoliticaDeAcoes` | soma os ciclos; acima disso, bloqueia e pede `escalado` |
 | Aprovacao humana | `HumanInTheLoopMiddleware` | `ACOES_COM_APROVACAO` pausa antes de executar; aprovar ou rejeitar |
@@ -115,6 +117,18 @@ O cenario do checkout-api tem uma armadilha para isso: `reiniciar_servico` deixa
 | `MAX_CICLOS` | `Registro` | reentradas alem do limite escalam |
 | Resolucao com prova | `validar_desfecho` | `resolvido` sem acao executada ou sem consulta de metricas depois dela vira `escalado` |
 | Supressao | `Registro` | alerta novo no mesmo servico ate `JANELA_SUPRESSAO_MIN` apos uma acao entra na timeline do incidente que agiu |
+
+## Autenticacao
+
+| Endpoint | Token aceito |
+| --- | --- |
+| `POST /webhooks/*` | `WEBHOOK_TOKEN` |
+| `GET /incidentes/{id}` | `WEBHOOK_TOKEN` ou `APROVACAO_TOKEN` |
+| `POST /incidentes/{id}/aprovacao` | somente `APROVACAO_TOKEN` |
+
+Quem configura a origem do alerta nao aprova acoes. Com `WEBHOOK_TOKEN` e sem `APROVACAO_TOKEN`, a aprovacao responde `503`; sem nenhum dos dois (modo local), tudo fica aberto. Os dois tokens precisam ser diferentes. O pedido de aprovacao exige `aprovador`, gravado na timeline.
+
+## Politica e aprovacao
 
 A politica roda antes da aprovacao: um humano nunca e chamado para aprovar uma acao que seria bloqueada. Uma rejeicao chega ao modelo como erro da ferramenta, com o motivo; o prompt pede para nao repetir a acao.
 
@@ -134,7 +148,8 @@ Cada incidente guarda os eventos em ordem: `recebido`, `raciocinio` (texto do mo
 Os mesmos do 05 (registro em memoria, background no processo, token opcional, assinatura do SNS nao validada, sem fallback de modelo), mais:
 
 - checkpointer em memoria (`InMemorySaver`): reiniciar perde as conversas e as aprovacoes pendentes; em producao, use um checkpointer persistente;
-- a aprovacao nao identifica quem aprovou: qualquer portador do token decide; uma decisao vale para todas as acoes pendentes do incidente;
+- o `aprovador` e declarado, nao autenticado: qualquer portador do `APROVACAO_TOKEN` decide em nome de quem escrever; em producao, use autenticacao de operador (SSO) e grave a identidade dela;
+- uma decisao vale para todas as acoes pendentes do incidente;
 - a supressao e por servico e janela: um problema novo e real no mesmo servico logo apos uma acao tambem e suprimido (fica registrado na timeline);
 - o ambiente simulado nao tem efeitos colaterais proprios: o alerta de efeito colateral e enviado a mao;
 - o cenario nao muda com o tempo, so com acoes e consultas.

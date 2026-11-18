@@ -4,12 +4,13 @@ import pytest
 from conftest import (
     SERVICO,
     ModeloRoteirizado,
+    _ids,
     agir,
     concluir,
     consultar,
     criar_agente,
 )
-from langchain_core.messages import ToolMessage
+from langchain_core.messages import AIMessage, ToolMessage
 
 from agente import Agente, validar_desfecho
 from contratos import Desfecho, EventoGenerico
@@ -180,6 +181,41 @@ def test_limite_de_acoes_por_incidente(ambiente):
     ]
     segunda = ferramentas(agente, inc)[-1]
     assert "limite de 1 acoes" in segunda.content
+
+
+def test_acoes_paralelas_na_mesma_resposta_executam_so_a_primeira(ambiente):
+    motivo = "hipotese de teste com evidencia"
+    paralelas = AIMessage(
+        content="",
+        tool_calls=[
+            {
+                "name": nome,
+                "args": {"servico": SERVICO, "motivo": motivo, **extra},
+                "id": f"p{next(_ids)}",
+            }
+            for nome, extra in [
+                ("reiniciar_servico", {}),
+                ("escalar_replicas", {"replicas": 6}),
+                ("reverter_deploy", {}),
+            ]
+        ],
+    )
+    agente = criar_agente(
+        ambiente,
+        [paralelas, concluir("escalado")],
+        max_acoes=3,
+        acoes_com_aprovacao=("reverter_deploy",),
+    )
+    inc = incidente()
+    ciclo = rodar(agente.iniciar(inc))
+
+    assert ciclo.situacao == "concluido"  # a terceira nem chegou a aprovacao
+    assert ambiente.consultar_estado(SERVICO)["acoes_executadas"] == [
+        "reiniciar_servico"
+    ]
+    bloqueadas = ferramentas(agente, inc, status="error")
+    assert len(bloqueadas) == 2
+    assert all("uma acao por resposta" in m.content for m in bloqueadas)
 
 
 def test_limite_de_chamadas_ao_modelo_escala(ambiente):

@@ -195,6 +195,11 @@ class PedidoAprovacao(BaseModel):
     """A decisao vale para todas as acoes pendentes do incidente."""
 
     decisao: Literal["aprovar", "rejeitar"]
+    aprovador: str = Field(
+        min_length=1,
+        max_length=100,
+        description="Quem decidiu; declarado, nao autenticado, e fica na timeline",
+    )
     motivo: str | None = Field(default=None, max_length=500)
 
 

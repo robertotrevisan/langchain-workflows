@@ -185,7 +185,7 @@ class Registro:
         }[desfecho.status]
 
     def iniciar_decisao(
-        self, id: str, aprovar: bool, motivo: str | None
+        self, id: str, aprovar: bool, motivo: str | None, aprovador: str
     ) -> list[AcaoPendente]:
         """Valida e registra a decisao humana; devolve as acoes a retomar. A
         transicao acontece aqui, antes do background, para que duas decisoes
@@ -204,9 +204,10 @@ class Registro:
         self._evento(
             registro,
             "aprovacao",
-            f"{'aprovado' if aprovar else 'rejeitado'}: {nomes}"
+            f"{'aprovado' if aprovar else 'rejeitado'} por {aprovador}: {nomes}"
             + (f" ({motivo})" if motivo else ""),
             aprovado=aprovar,
+            aprovador=aprovador,
         )
         return pendentes
 

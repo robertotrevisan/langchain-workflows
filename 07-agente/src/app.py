@@ -8,7 +8,11 @@ from pydantic import ValidationError
 
 from agente import Agente, Ciclo, criar_modelo
 from ambiente import AmbienteSimulado
-from autenticacao import verificar_token
+from autenticacao import (
+    verificar_token,
+    verificar_token_aprovacao,
+    verificar_token_leitura,
+)
 from config import carregar_config
 from contratos import (
     EventoGenerico,
@@ -33,6 +37,7 @@ def criar_app(
     agente: Agente | None = None,
     token: str | None = None,
     registro: Registro | None = None,
+    token_aprovacao: str | None = None,
 ) -> FastAPI:
     """Sem agente, monta tudo a partir do ambiente na inicializacao. Os testes
     injetam um agente com modelo falso e, opcionalmente, token e registro."""
@@ -51,6 +56,7 @@ def criar_app(
             )
             app.state.registro = Registro(config.max_ciclos, config.janela_supressao)
             app.state.token = config.webhook_token
+            app.state.token_aprovacao = config.aprovacao_token
             logger.info(
                 "modelo=%s aprovacao=%s max_acoes=%d max_ciclos=%d",
                 config.modelo,
@@ -62,8 +68,11 @@ def criar_app(
             app.state.agente = agente
             app.state.registro = registro or Registro()
             app.state.token = token
+            app.state.token_aprovacao = token_aprovacao
         if app.state.token is None:
             logger.warning("WEBHOOK_TOKEN ausente: endpoints sem autenticacao")
+        elif app.state.token_aprovacao is None:
+            logger.warning("APROVACAO_TOKEN ausente: aprovacao de acoes desligada")
         yield
 
     app = FastAPI(
@@ -74,7 +83,6 @@ def criar_app(
         ),
         version="0.1.0",
         lifespan=lifespan,
-        dependencies=[Depends(verificar_token)],
     )
 
     async def executar(
@@ -135,13 +143,21 @@ def criar_app(
             itens.append(item)
         return RespostaWebhook(recebidos=itens)
 
-    @app.post("/webhooks/alertmanager", status_code=202)
+    @app.post(
+        "/webhooks/alertmanager",
+        status_code=202,
+        dependencies=[Depends(verificar_token)],
+    )
     async def webhook_alertmanager(
         payload: WebhookAlertmanager, tarefas: BackgroundTasks
     ) -> RespostaWebhook:
         return receber(de_alertmanager(payload), tarefas)
 
-    @app.post("/webhooks/cloudwatch", status_code=202)
+    @app.post(
+        "/webhooks/cloudwatch",
+        status_code=202,
+        dependencies=[Depends(verificar_token)],
+    )
     async def webhook_cloudwatch(
         request: Request, tarefas: BackgroundTasks
     ) -> RespostaWebhook:
@@ -172,27 +188,37 @@ def criar_app(
             return RespostaWebhook(recebidos=[item])
         return receber([incidente], tarefas)
 
-    @app.post("/webhooks/generico", status_code=202)
+    @app.post(
+        "/webhooks/generico",
+        status_code=202,
+        dependencies=[Depends(verificar_token)],
+    )
     async def webhook_generico(
         evento: EventoGenerico, tarefas: BackgroundTasks
     ) -> RespostaWebhook:
         return receber([de_generico(evento)], tarefas)
 
-    @app.get("/incidentes/{id}")
+    @app.get("/incidentes/{id}", dependencies=[Depends(verificar_token_leitura)])
     async def obter_incidente(id: str) -> RegistroIncidente:
         registro = app.state.registro.obter(id)
         if registro is None:
             raise HTTPException(404, "incidente nao encontrado")
         return registro
 
-    @app.post("/incidentes/{id}/aprovacao", status_code=202)
+    @app.post(
+        "/incidentes/{id}/aprovacao",
+        status_code=202,
+        dependencies=[Depends(verificar_token_aprovacao)],
+    )
     async def aprovar(
         id: str, pedido: PedidoAprovacao, tarefas: BackgroundTasks
     ) -> RegistroIncidente:
         registro: Registro = app.state.registro
         aprovar = pedido.decisao == "aprovar"
         try:
-            pendentes = registro.iniciar_decisao(id, aprovar, pedido.motivo)
+            pendentes = registro.iniciar_decisao(
+                id, aprovar, pedido.motivo, pedido.aprovador
+            )
         except KeyError as erro:
             raise HTTPException(404, "incidente nao encontrado") from erro
         except TransicaoInvalida as erro:

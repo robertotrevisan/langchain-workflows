@@ -193,6 +193,17 @@ class PoliticaDeAcoes(AgentMiddleware):
                 request.tool.tool_call_schema.model_validate(chamada["args"])
             except ValidationError as erro:
                 return f"argumentos invalidos: {erro.errors(include_url=False)}"
+        # As chamadas de uma mesma resposta rodam em paralelo e nao veem umas as
+        # outras na contagem abaixo; por isso so a primeira acao da resposta vale.
+        resposta = next(
+            m
+            for m in reversed(request.state["messages"])
+            if isinstance(m, AIMessage)
+            and any(c["id"] == chamada["id"] for c in m.tool_calls)
+        )
+        primeira = next(c for c in resposta.tool_calls if c["name"] in ACOES)
+        if primeira["id"] != chamada["id"]:
+            return "uma acao por resposta; verifique o efeito antes da proxima"
         if acoes_executadas(request.state["messages"]) >= self.max_acoes:
             return (
                 f"limite de {self.max_acoes} acoes por incidente atingido; "
