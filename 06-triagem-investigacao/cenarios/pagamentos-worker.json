@@ -1,0 +1,39 @@
+{
+  "descricao": "Fila acumulando sem deploy recente; a fonte de logs nao responde",
+  "fontes_indisponiveis": ["logs"],
+  "metricas": [
+    {
+      "nome": "fila_mensagens_pendentes",
+      "unidade": "mensagens",
+      "pontos": [
+        {"horario": "13:50", "valor": 120},
+        {"horario": "14:00", "valor": 900},
+        {"horario": "14:10", "valor": 4800},
+        {"horario": "14:20", "valor": 11200}
+      ]
+    },
+    {
+      "nome": "latencia_gateway_pagamento_p95",
+      "unidade": "ms",
+      "pontos": [
+        {"horario": "13:50", "valor": 380},
+        {"horario": "14:00", "valor": 2900},
+        {"horario": "14:10", "valor": 8100},
+        {"horario": "14:20", "valor": 9700}
+      ]
+    },
+    {
+      "nome": "workers_ativos",
+      "unidade": "instancias",
+      "pontos": [
+        {"horario": "13:50", "valor": 6},
+        {"horario": "14:00", "valor": 6},
+        {"horario": "14:10", "valor": 6},
+        {"horario": "14:20", "valor": 6}
+      ]
+    }
+  ],
+  "deploys": [
+    {"versao": "v1.8.2", "horario": "3 dias atras", "autor": "pipeline", "status": "sucesso"}
+  ]
+}

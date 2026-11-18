@@ -152,7 +152,7 @@ O que os exemplos 01 a 04 omitem de proposito. Os exemplos continuam didaticos; 
 | Confianca do roteador | `Roteamento` sem justificativa nem confianca (03) | 06 |
 | Recomendacao de acao | nenhuma | 06 |
 | Acao e verificacao | nenhuma | 07 |
-| Autenticacao | nenhuma | fora do escopo; ver roadmap |
+| Autenticacao | nenhuma | 05 (`WEBHOOK_TOKEN` opcional); assinatura do SNS fora do escopo |
 | Avaliacao de qualidade | nenhuma; o contrato valida a forma, nao o conteudo | fora do escopo; ver roadmap |
 
 ## Roadmap: modelos 05 a 07
@@ -241,22 +241,23 @@ webhook -> Incidente -> RunnableParallel(metricas, logs, deploys) -> consolidaca
 
 ### 06 — Triagem + investigacao
 
+**Status: implementado** em `06-triagem-investigacao/`. O README do projeto descreve rotas, limiar e avaliacao do roteador.
+
 ```text
 webhook -> Incidente -> roteador (destino, confianca, justificativa)
-                          +--> incidente   -> investigacao do 05 -> recomendacao de runbook
+                          +--> investigar  -> investigacao do 05 -> recomendacao de runbook
                           +--> ruido       -> registra e encerra
-                          +--> fallback    -> escala para humano
+                          +--> humano      -> registra para escalacao
 ```
 
 **Entrega:**
 
-- `Roteamento` com `destino`, `confianca` e `justificativa`; confianca abaixo de um limite configuravel vai para `fallback`;
-- rota `ruido` para alertas informativos ou flapping, o que evita gastar a investigacao;
-- um catalogo de runbooks ficticio, e a recomendacao escolhe um runbook do catalogo, nunca inventa;
-- um contrato de saida unico para todas as rotas;
-- testes do roteador por cenario: cada cenario tem a rota esperada.
-
-As rotas finais do roteador ficam para a implementacao. As de cima sao o ponto de partida.
+- `Roteamento` com `destino`, `confianca` e `justificativa`; confianca abaixo de `LIMIAR_CONFIANCA` vai para `humano`, preservando o destino original na `Tratativa`;
+- rota `ruido` para alertas informativos, heartbeat ou flapping, o que evita gastar a investigacao; o roteador recebe quantos incidentes com o mesmo `origem:fingerprint` foram abertos na ultima hora;
+- um catalogo de runbooks ficticio; a recomendacao escolhe um id do catalogo, e o codigo descarta ids inventados;
+- um contrato de saida unico para todas as rotas (`Tratativa`);
+- `MODELO_ROTEADOR` separado de `MODELO`, para usar um modelo mais barato na triagem;
+- testes da logica de rotas com modelo falso, e uma avaliacao do roteador com o modelo real (`RODAR_LLM=1`) sobre tres entradas com destino esperado.
 
 **Nao faz:** execucao de acao.
 
@@ -287,7 +288,6 @@ webhook -> Incidente -> agente (tool-calling em loop)
 ### Fora do escopo dos tres modelos
 
 - fontes de dados reais (Prometheus, CloudWatch Logs, CI);
-- autenticacao dos webhooks: pelo menos um token compartilhado sera necessario antes de expor em rede;
 - validacao da assinatura das mensagens SNS;
 - avaliacao automatizada da qualidade dos diagnosticos;
 - fila externa (SQS, Redis): o background roda no proprio processo.

@@ -18,6 +18,8 @@ Os exemplos 01 a 04 ficam **didaticos e intactos**. A evolucao para uso real aco
 - Os imports dentro de `src/` sao planos (`from contratos import ...`, `from workflow import ...`). Nao converta para pacote/imports relativos sem ajustar a forma de execucao.
 - Lint/format: `uv run ruff check src` e `uv run ruff format src` (config em `[tool.ruff]` de cada `pyproject.toml`).
 - Testes so existem a partir do 05: `uv run pytest` (com `pythonpath = ["src"]`). Eles usam `ModeloFalso` (`tests/conftest.py`) e nunca chamam API de LLM; mantenha assim. O app e testado via `criar_app(investigacao)`, com modelo injetado.
+- 06: `RODAR_LLM=1 uv run pytest tests/test_roteador_llm.py -v` avalia o roteador com o modelo real (custa chamadas de API). Rode depois de mudar `SYSTEM_ROTEADOR` ou `MODELO_ROTEADOR`.
+- 05 e 06 compartilham codigo por copia (ADR 001): uma correcao em `webhooks.py`, `fontes.py`, `autenticacao.py`, `workflow.py` ou `registro.py` deve ser replicada no outro projeto.
 - A partir do 05, nenhum modulo de `src/` pode ter efeito colateral no import (ler env, instanciar modelo). A configuracao e lida no `lifespan`.
 - Em 01, `import time` sem uso e intencional: o bloco `RunnableSequence` do README, que substitui o final de `app.py`, usa esse import. Nao remova.
 
