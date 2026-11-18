@@ -1,0 +1,250 @@
+{
+  "descricao": "Deploy v2.14.0 introduziu transacao longa no PromotionService que esgota o pool de conexoes. Reiniciar alivia por pouco tempo; reverter o deploy resolve.",
+  "estado_inicial": {
+    "versao": "v2.14.0",
+    "versao_anterior": "v2.13.4",
+    "replicas": 4
+  },
+  "fontes_indisponiveis": [],
+  "degradado": {
+    "metricas": [
+      {
+        "nome": "taxa_erro_5xx",
+        "unidade": "percentual",
+        "pontos": [
+          {
+            "horario": "13:50",
+            "valor": 0.4
+          },
+          {
+            "horario": "14:00",
+            "valor": 0.5
+          },
+          {
+            "horario": "14:10",
+            "valor": 6.2
+          },
+          {
+            "horario": "14:20",
+            "valor": 18.1
+          }
+        ]
+      },
+      {
+        "nome": "latencia_p95",
+        "unidade": "ms",
+        "pontos": [
+          {
+            "horario": "13:50",
+            "valor": 210
+          },
+          {
+            "horario": "14:00",
+            "valor": 230
+          },
+          {
+            "horario": "14:10",
+            "valor": 1400
+          },
+          {
+            "horario": "14:20",
+            "valor": 1900
+          }
+        ]
+      },
+      {
+        "nome": "pool_conexoes_uso",
+        "unidade": "fracao",
+        "pontos": [
+          {
+            "horario": "13:50",
+            "valor": 0.55
+          },
+          {
+            "horario": "14:00",
+            "valor": 0.6
+          },
+          {
+            "horario": "14:10",
+            "valor": 0.97
+          },
+          {
+            "horario": "14:20",
+            "valor": 0.99
+          }
+        ]
+      },
+      {
+        "nome": "cpu_uso",
+        "unidade": "fracao",
+        "pontos": [
+          {
+            "horario": "13:50",
+            "valor": 0.41
+          },
+          {
+            "horario": "14:00",
+            "valor": 0.43
+          },
+          {
+            "horario": "14:10",
+            "valor": 0.47
+          },
+          {
+            "horario": "14:20",
+            "valor": 0.46
+          }
+        ]
+      }
+    ],
+    "logs": [
+      {
+        "horario": "14:02:11",
+        "nivel": "INFO",
+        "mensagem": "Started CheckoutApplication v2.14.0"
+      },
+      {
+        "horario": "14:06:40",
+        "nivel": "WARN",
+        "mensagem": "HikariPool-1 - Thread starvation or clock leap detected"
+      },
+      {
+        "horario": "14:08:03",
+        "nivel": "ERROR",
+        "mensagem": "HikariPool-1 - Connection is not available, request timed out after 30000ms"
+      },
+      {
+        "horario": "14:08:03",
+        "nivel": "ERROR",
+        "mensagem": "POST /checkout 503 - CannotGetJdbcConnectionException"
+      },
+      {
+        "horario": "14:12:19",
+        "nivel": "ERROR",
+        "mensagem": "HikariPool-1 - Connection is not available, request timed out after 30000ms"
+      },
+      {
+        "horario": "14:15:52",
+        "nivel": "WARN",
+        "mensagem": "PromotionService.applyCoupons executed 48 queries in a single transaction"
+      }
+    ]
+  },
+  "saudavel": {
+    "metricas": [
+      {
+        "nome": "taxa_erro_5xx",
+        "unidade": "percentual",
+        "pontos": [
+          {
+            "horario": "+5min",
+            "valor": 0.6
+          },
+          {
+            "horario": "+10min",
+            "valor": 0.5
+          },
+          {
+            "horario": "+15min",
+            "valor": 0.4
+          }
+        ]
+      },
+      {
+        "nome": "latencia_p95",
+        "unidade": "ms",
+        "pontos": [
+          {
+            "horario": "+5min",
+            "valor": 240
+          },
+          {
+            "horario": "+10min",
+            "valor": 225
+          },
+          {
+            "horario": "+15min",
+            "valor": 220
+          }
+        ]
+      },
+      {
+        "nome": "pool_conexoes_uso",
+        "unidade": "fracao",
+        "pontos": [
+          {
+            "horario": "+5min",
+            "valor": 0.35
+          },
+          {
+            "horario": "+10min",
+            "valor": 0.48
+          },
+          {
+            "horario": "+15min",
+            "valor": 0.56
+          }
+        ]
+      },
+      {
+        "nome": "cpu_uso",
+        "unidade": "fracao",
+        "pontos": [
+          {
+            "horario": "+5min",
+            "valor": 0.4
+          },
+          {
+            "horario": "+10min",
+            "valor": 0.42
+          },
+          {
+            "horario": "+15min",
+            "valor": 0.41
+          }
+        ]
+      }
+    ],
+    "logs": [
+      {
+        "horario": "+1min",
+        "nivel": "INFO",
+        "mensagem": "Started CheckoutApplication"
+      },
+      {
+        "horario": "+6min",
+        "nivel": "INFO",
+        "mensagem": "HikariPool-1 - pool stats (total=20, active=7, idle=13, waiting=0)"
+      }
+    ]
+  },
+  "deploys": [
+    {
+      "versao": "v2.13.4",
+      "horario": "ontem 16:30",
+      "autor": "pipeline",
+      "status": "sucesso"
+    },
+    {
+      "versao": "v2.14.0",
+      "horario": "14:02",
+      "autor": "pipeline",
+      "status": "sucesso"
+    }
+  ],
+  "efeitos": {
+    "reiniciar_servico": {
+      "efeito": "temporario",
+      "consultas_ate_recair": 1,
+      "nota": "o pool volta vazio, mas a transacao longa o esgota de novo"
+    },
+    "escalar_replicas": {
+      "efeito": "nenhum",
+      "nota": "cada replica nova tambem esgota o proprio pool"
+    },
+    "reverter_deploy": {
+      "efeito": "resolve",
+      "nota": "a versao anterior nao tem a transacao longa"
+    }
+  }
+}

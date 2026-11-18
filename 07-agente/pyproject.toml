@@ -1,0 +1,34 @@
+[project]
+name = "agente"
+version = "0.1.0"
+description = "Agente de AIOps que investiga, age em um ambiente simulado e verifica a resolucao, com limites e aprovacao humana"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]>=0.163.1",
+    "langchain>=1.5.0",
+    "langchain-openai>=1.8.0",
+    "langgraph>=1.2.22",
+    "pydantic>=2.14.3",
+    "python-dotenv>=1.2.4",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agente", "ambiente", "app", "autenticacao", "config", "contratos", "registro", "webhooks"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.5",
+]

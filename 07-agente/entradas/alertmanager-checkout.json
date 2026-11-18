@@ -1,0 +1,32 @@
+{
+  "version": "4",
+  "groupKey": "{}:{alertname=~\".*\"}",
+  "truncatedAlerts": 0,
+  "status": "firing",
+  "receiver": "aiops-webhook",
+  "groupLabels": {},
+  "commonLabels": {
+    "env": "producao"
+  },
+  "commonAnnotations": {},
+  "externalURL": "http://alertmanager.exemplo.local:9093",
+  "alerts": [
+    {
+      "status": "firing",
+      "labels": {
+        "alertname": "CheckoutHighErrorRate",
+        "service": "checkout-api",
+        "severity": "critical",
+        "env": "producao"
+      },
+      "annotations": {
+        "summary": "Taxa de erro 5xx acima de 5% no checkout-api",
+        "description": "A taxa de respostas 5xx do checkout-api esta em 18% nos ultimos 10 minutos (limite 5%)."
+      },
+      "startsAt": "2026-11-16T14:10:00Z",
+      "endsAt": "0001-01-01T00:00:00Z",
+      "generatorURL": "http://prometheus.exemplo.local:9090/graph",
+      "fingerprint": "a1b2c3d4e5f60718"
+    }
+  ]
+}
