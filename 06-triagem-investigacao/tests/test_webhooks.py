@@ -1,8 +1,17 @@
 import json
 
+import pytest
 from conftest import ler_entrada
+from pydantic import ValidationError
 
-from contratos import MAX_DESCRICAO, EventoGenerico, WebhookAlertmanager
+from contratos import (
+    MAX_ALERTAS_POR_POST,
+    MAX_DESCRICAO,
+    MAX_LABELS,
+    MAX_VALOR_LABEL,
+    EventoGenerico,
+    WebhookAlertmanager,
+)
 from webhooks import de_alertmanager, de_cloudwatch, de_generico, ler_sns
 
 
@@ -72,3 +81,29 @@ def test_generico_deriva_fingerprint_estavel():
 
     assert primeiro.fingerprint == segundo.fingerprint
     assert primeiro.id != segundo.id
+
+
+def test_alertmanager_labels_excessivos_sao_cortados():
+    dados = ler_entrada("alertmanager.json")
+    labels = dados["alerts"][0]["labels"]
+    labels.update({f"extra{i}": "v" * (MAX_VALOR_LABEL * 2) for i in range(200)})
+
+    [incidente, _] = de_alertmanager(WebhookAlertmanager.model_validate(dados))
+
+    assert len(incidente.labels) == MAX_LABELS
+    assert max(len(v) for v in incidente.labels.values()) <= MAX_VALOR_LABEL
+    assert incidente.servico == "checkout-api"
+
+
+def test_alertmanager_com_alertas_demais_e_rejeitado():
+    dados = ler_entrada("alertmanager.json")
+    dados["alerts"] = dados["alerts"][:1] * (MAX_ALERTAS_POR_POST + 1)
+    with pytest.raises(ValidationError):
+        WebhookAlertmanager.model_validate(dados)
+
+
+def test_generico_rejeita_labels_excessivos():
+    dados = ler_entrada("generico.json")
+    dados["labels"] = {f"k{i}": "v" for i in range(MAX_LABELS + 1)}
+    with pytest.raises(ValidationError):
+        EventoGenerico.model_validate(dados)

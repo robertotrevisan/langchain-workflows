@@ -127,6 +127,7 @@ Se todos os ramos falharem e algum falhar por erro de modelo ou de codigo (`orig
 - os modulos nao tem efeito colateral no import: a configuracao e lida no `lifespan`, o que permite aos testes injetar um modelo falso via `criar_app(investigacao)`;
 - o nome do servico e validado antes de virar caminho de arquivo, porque vem de um payload externo;
 - a deduplicacao usa `origem:fingerprint`, entao uma origem nao fecha nem bloqueia incidente de outra;
+- tudo o que entra no prompt e limitado: descricao (4000), servico (100), ate 30 labels (chave 100, valor 300) e ate 100 alertas por POST. Os adaptadores cortam o excesso; o webhook generico rejeita com 422. O limite de tamanho do corpo HTTP fica no proxy reverso;
 - a API expoe so o tipo do erro (`RuntimeError`, `OpenAIAuthenticationError`); a mensagem completa fica no log.
 
 ## Limites intencionais

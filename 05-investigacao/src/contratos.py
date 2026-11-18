@@ -1,9 +1,23 @@
 from datetime import datetime
-from typing import Literal
+from typing import Annotated, Literal
 
-from pydantic import BaseModel, Field
+from pydantic import BaseModel, Field, StringConstraints
 
 MAX_DESCRICAO = 4000
+MAX_SERVICO = 100
+MAX_LABELS = 30
+MAX_CHAVE_LABEL = 100
+MAX_VALOR_LABEL = 300
+MAX_ALERTAS_POR_POST = 100
+
+# Labels entram no prompt: quantidade e tamanho limitados para conter custo.
+Labels = Annotated[
+    dict[
+        Annotated[str, StringConstraints(max_length=MAX_CHAVE_LABEL)],
+        Annotated[str, StringConstraints(max_length=MAX_VALOR_LABEL)],
+    ],
+    Field(max_length=MAX_LABELS),
+]
 
 Origem = Literal["alertmanager", "cloudwatch", "generico"]
 StatusAlerta = Literal["firing", "resolved"]
@@ -23,10 +37,11 @@ class Incidente(BaseModel):
     descricao: str = Field(max_length=MAX_DESCRICAO)
     servico: str | None = Field(
         default=None,
+        max_length=MAX_SERVICO,
         description="Servico afetado; sem servico nao ha fonte para consultar",
     )
     severidade: Severidade = "warning"
-    labels: dict[str, str] = Field(default_factory=dict)
+    labels: Labels = Field(default_factory=dict)
     inicio: datetime
 
 
@@ -40,9 +55,9 @@ class EventoGenerico(BaseModel):
     status: StatusAlerta = "firing"
     titulo: str = Field(min_length=1, max_length=200)
     descricao: str = Field(default="", max_length=MAX_DESCRICAO)
-    servico: str | None = None
+    servico: str | None = Field(default=None, max_length=MAX_SERVICO)
     severidade: Severidade = "warning"
-    labels: dict[str, str] = Field(default_factory=dict)
+    labels: Labels = Field(default_factory=dict)
     inicio: datetime | None = None
 
 
@@ -60,7 +75,9 @@ class AlertaAlertmanager(BaseModel):
 class WebhookAlertmanager(BaseModel):
     version: str
     status: StatusAlerta
-    alerts: list[AlertaAlertmanager] = Field(min_length=1)
+    alerts: list[AlertaAlertmanager] = Field(
+        min_length=1, max_length=MAX_ALERTAS_POR_POST
+    )
 
 
 class MensagemSns(BaseModel):

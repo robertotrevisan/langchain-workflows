@@ -9,7 +9,11 @@ import uuid
 from datetime import UTC, datetime
 
 from contratos import (
+    MAX_CHAVE_LABEL,
     MAX_DESCRICAO,
+    MAX_LABELS,
+    MAX_SERVICO,
+    MAX_VALOR_LABEL,
     AlarmeCloudWatch,
     EventoGenerico,
     Incidente,
@@ -33,6 +37,19 @@ def _truncar(texto: str) -> str:
     if len(texto) <= MAX_DESCRICAO:
         return texto
     return texto[: MAX_DESCRICAO - len(SUFIXO_TRUNCADO)] + SUFIXO_TRUNCADO
+
+
+def _limitar_labels(labels: dict[str, str]) -> dict[str, str]:
+    """Origens externas podem mandar labels sem limite; o adaptador corta em vez
+    de rejeitar o alerta."""
+    return {
+        chave[:MAX_CHAVE_LABEL]: valor[:MAX_VALOR_LABEL]
+        for chave, valor in list(labels.items())[:MAX_LABELS]
+    }
+
+
+def _limitar_servico(servico: str | None) -> str | None:
+    return servico[:MAX_SERVICO] if servico else servico
 
 
 def _severidade(valor: str | None) -> Severidade:
@@ -63,9 +80,9 @@ def de_alertmanager(payload: WebhookAlertmanager) -> list[Incidente]:
                 descricao=_truncar(
                     anotacoes.get("description") or anotacoes.get("summary") or ""
                 ),
-                servico=servico,
+                servico=_limitar_servico(servico),
                 severidade=_severidade(labels.get("severity")),
-                labels=labels,
+                labels=_limitar_labels(labels),
                 inicio=alerta.startsAt,
             )
         )
@@ -98,13 +115,15 @@ def de_cloudwatch(mensagem: MensagemSns) -> Incidente | None:
         status="firing" if alarme.NewStateValue == "ALARM" else "resolved",
         titulo=alarme.AlarmName[:200],
         descricao=_truncar(alarme.NewStateReason),
-        servico=servico,
+        servico=_limitar_servico(servico),
         severidade=severidade,
-        labels={
-            "metrica": alarme.Trigger.MetricName or "",
-            "namespace": alarme.Trigger.Namespace or "",
-            **dimensoes,
-        },
+        labels=_limitar_labels(
+            {
+                "metrica": alarme.Trigger.MetricName or "",
+                "namespace": alarme.Trigger.Namespace or "",
+                **dimensoes,
+            }
+        ),
         inicio=alarme.StateChangeTime,
     )
 

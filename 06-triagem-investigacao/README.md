@@ -103,7 +103,7 @@ Para adicionar um runbook, inclua um item em `runbooks/catalogo.json` com `id` u
 
 ## Limites intencionais
 
-Os mesmos do 05 (registro em memoria, background no processo, token opcional, assinatura do SNS nao validada, sem fallback de modelo), mais:
+Os mesmos do 05 (registro em memoria, background no processo, token opcional, assinatura do SNS nao validada, sem fallback de modelo, limites de entrada iguais), mais:
 
 - a rota `humano` so registra; nao notifica ninguem (Slack, PagerDuty);
 - os destinos esperados do roteador sao avaliados com tres casos; um conjunto maior de avaliacao fica para o projeto real;
