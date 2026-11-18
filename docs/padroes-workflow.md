@@ -142,12 +142,12 @@ O que os exemplos 01 a 04 omitem de proposito. Os exemplos continuam didaticos; 
 | Configuracao de modelo | IDs de modelo fixos no codigo | 05 |
 | Validacao de ambiente | 01/02 fazem `raise SystemExit` no import se faltar chave, o que derruba o servidor; 03/04 nao validam | 05 |
 | Retry e timeout | nenhum `max_retries`, `timeout` ou `.with_retry()` | 05 |
-| Fallback de modelo | nenhum `.with_fallbacks()` | 05 |
+| Fallback de modelo | nenhum `.with_fallbacks()` para outro modelo ou provider | pendente; o 05 usa `.with_fallbacks()` so para resultado parcial |
 | Tratamento de erros HTTP | qualquer falha do LLM vira 500 | 05 |
 | Resultado parcial | um ramo com falha derruba a requisicao (04) | 05 |
 | Limites de entrada | sem `max_length`, sem controle de custo nem de prompt injection | 05 |
 | Concorrencia | endpoints sincronos (`def`) com `.invoke()` | 05 |
-| Observabilidade | `print()`, sem logging estruturado nem tracing | 05 |
+| Observabilidade | `print()`, sem logging estruturado nem tracing | 05 (logging com `incidente=<id>`; tracing via variaveis `LANGSMITH_*`) |
 | Testes | nenhum; use fake chat models do `langchain_core` para testar o fluxo sem chamar a API | 05 |
 | Confianca do roteador | `Roteamento` sem justificativa nem confianca (03) | 06 |
 | Recomendacao de acao | nenhuma | 06 |
@@ -218,6 +218,8 @@ Construida no 05 e copiada para 06 e 07.
 
 ### 05 — Investigacao
 
+**Status: implementado** em `05-investigacao/`. O README do projeto descreve endpoints, cenarios e status.
+
 ```text
 webhook -> Incidente -> RunnableParallel(metricas, logs, deploys) -> consolidacao -> Diagnostico
                          cada ramo: consulta a fonte ficticia -> LLM analisa o resultado
@@ -227,7 +229,8 @@ webhook -> Incidente -> RunnableParallel(metricas, logs, deploys) -> consolidaca
 
 - a base comum completa: webhook, adaptadores, `Incidente`, deduplicacao e processamento em background;
 - ramos que consultam dados antes de chamar o LLM, cada um com uma fonte e uma perspectiva;
-- resultado parcial: um ramo que falha vira `Analise` com status de falha, e a consolidacao continua com os demais (`return_exceptions` / `.with_fallbacks()` por ramo);
+- resultado parcial: um ramo que falha vira `Analise(status="falha")` via `.with_fallbacks(..., exception_key="erro")`, e a consolidacao continua com os demais;
+- `origem_falha` separa "a fonte nao tinha dados" (`inconclusivo`) de "o modelo ou o codigo falhou" (registro em `falha`, com nova tentativa no proximo disparo);
 - `perspectiva` definida pelo codigo, nao pelo modelo;
 - modelo e timeouts configuraveis por variavel de ambiente, com `max_retries` e `timeout`;
 - validacao de ambiente na inicializacao do app, sem `SystemExit` no import;

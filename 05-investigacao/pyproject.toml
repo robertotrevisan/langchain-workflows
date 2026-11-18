@@ -1,0 +1,33 @@
+[project]
+name = "investigacao"
+version = "0.1.0"
+description = "Investigacao de incidentes recebidos por webhook, com fontes ficticias e analise paralela"
+readme = "README.md"
+requires-python = ">=3.12"
+dependencies = [
+    "fastapi[standard]>=0.163.1",
+    "langchain>=1.5.0",
+    "langchain-openai>=1.8.0",
+    "pydantic>=2.14.3",
+    "python-dotenv>=1.2.4",
+]
+
+[tool.ruff]
+line-length = 88
+target-version = "py312"
+
+[tool.ruff.lint]
+select = ["E", "F", "I", "B", "UP"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["app", "config", "contratos", "fontes", "registro", "webhooks", "workflow"]
+
+[tool.pytest.ini_options]
+pythonpath = ["src"]
+testpaths = ["tests"]
+
+[dependency-groups]
+dev = [
+    "pytest>=9.2.0",
+    "ruff>=0.17.5",
+]

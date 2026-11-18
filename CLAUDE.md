@@ -13,9 +13,12 @@ Os exemplos 01 a 04 ficam **didaticos e intactos**. A evolucao para uso real aco
 - Nao ha manifest na raiz. Cada pasta numerada e um projeto `uv` independente, com `pyproject.toml`, `uv.lock` e `.env` proprios. Rode todos os comandos **de dentro da pasta do projeto**.
 - Setup: `cp .env.example .env && uv sync`. As chaves variam por projeto: `GOOGLE_API_KEY` em 01/02, `OPENAI_API_KEY` + `ANTHROPIC_API_KEY` em 03, `OPENAI_API_KEY` em 04.
 - 01 e um script: `uv run src/app.py`. Ele le `alerta.txt` pelo cwd.
-- 02 a 04 sao APIs: `uv run fastapi dev src/app.py`, depois `curl --data @entrada.json ...` (02) ou `--data @entradas/<arquivo>.json` (03/04). Os endpoints estao nos READMEs.
+- 02 a 05 sao APIs: `uv run fastapi dev src/app.py`, depois `curl --data @entrada.json ...` (02) ou `--data @entradas/<arquivo>.json` (03 a 05). Os endpoints estao nos READMEs.
+- 05: o webhook do CloudWatch le o corpo cru, porque o SNS envia `Content-Type: text/plain`. A chave depende de `MODELO` (`provider:modelo`); o default e `openai:gpt-5.6-luna`.
 - Os imports dentro de `src/` sao planos (`from contratos import ...`, `from workflow import ...`). Nao converta para pacote/imports relativos sem ajustar a forma de execucao.
-- Lint/format: `uv run ruff check src` e `uv run ruff format src` (config em `[tool.ruff]` de cada `pyproject.toml`). Nao ha testes.
+- Lint/format: `uv run ruff check src` e `uv run ruff format src` (config em `[tool.ruff]` de cada `pyproject.toml`).
+- Testes so existem a partir do 05: `uv run pytest` (com `pythonpath = ["src"]`). Eles usam `ModeloFalso` (`tests/conftest.py`) e nunca chamam API de LLM; mantenha assim. O app e testado via `criar_app(investigacao)`, com modelo injetado.
+- A partir do 05, nenhum modulo de `src/` pode ter efeito colateral no import (ler env, instanciar modelo). A configuracao e lida no `lifespan`.
 - Em 01, `import time` sem uso e intencional: o bloco `RunnableSequence` do README, que substitui o final de `app.py`, usa esse import. Nao remova.
 
 ## Convencoes
