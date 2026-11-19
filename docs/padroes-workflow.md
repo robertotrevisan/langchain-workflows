@@ -157,7 +157,7 @@ O que os exemplos 01 a 04 omitem de proposito. Os exemplos continuam didaticos; 
 
 ## Roadmap: modelos 05 a 07
 
-Tres modelos incrementais prontos para uso real, cada um utilizavel sozinho como boilerplate. As fontes de dados sao ficticias. Cada modelo e um projeto `uv` independente e copia o codigo comum do anterior.
+Tres modelos incrementais prontos para uso real, cada um utilizavel sozinho como boilerplate. Como iniciar um projeto a partir deles: [iniciar-projeto.md](iniciar-projeto.md). As fontes de dados sao ficticias. Cada modelo e um projeto `uv` independente e copia o codigo comum do anterior.
 
 | | 05 investigacao | 06 triagem + investigacao | 07 agente |
 | --- | --- | --- | --- |
@@ -305,6 +305,7 @@ webhook -> Incidente -> agente (tool-calling em loop)
 ## Referencias
 
 - [ADR 001](adrs/001-evolucao-para-agente-aiops.md)
+- [Iniciar um projeto a partir dos modelos 05 a 07](iniciar-projeto.md)
 - `01-workflow-sequencial/README.md`
 - `02-outputs-contratos/README.md`
 - `03-routing-workflow/README.md`

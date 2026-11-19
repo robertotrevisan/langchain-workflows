@@ -6,6 +6,8 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 Quatro exemplos de workflows LangChain para AIOps (`01-workflow-sequencial`, `02-outputs-contratos`, `03-routing-workflow`, `04-parallel-workflow`). Eles nasceram como material didatico e agora servem de base para boilerplates de projetos reais. Comparativo, casos de uso e lacunas para producao: @docs/padroes-workflow.md
 
+Para comecar um projeto novo a partir de 05, 06 ou 07 (o que copiar, o que trocar, ordem dos itens de producao): `docs/iniciar-projeto.md`. Ao mudar a estrutura de um desses modelos, revise o guia.
+
 Os exemplos 01 a 04 ficam **didaticos e intactos**. A evolucao para uso real acontece nos modelos 05, 06 e 07 (webhook, fontes ficticias, agente), ja implementados, conforme `docs/adrs/001-evolucao-para-agente-aiops.md` e a secao "Roadmap" de `docs/padroes-workflow.md`. Decisoes duraveis viram ADR em `docs/adrs/` (`NNN-slug.md`), e ADR `aceito` nao se edita: revisar uma decisao significa criar um ADR novo que o supersede. Ao mudar o comportamento de um projeto, atualize o `README.md` dele e a tabela de lacunas em `docs/padroes-workflow.md`.
 
 ## Estrutura e comandos
